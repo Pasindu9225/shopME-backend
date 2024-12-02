@@ -6,6 +6,7 @@ import morgan from "morgan";
 import helmet from "helmet";
 
 import { connectDB } from "./config/db.js";
+import userRouter from "./routs/user.route.js";
 
 dotenv.config();
 
@@ -31,6 +32,8 @@ app.use(
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
+
+app.use("/api/user", userRouter);
 
 connectDB().then(() => {
   app.listen(PORT, () => {
