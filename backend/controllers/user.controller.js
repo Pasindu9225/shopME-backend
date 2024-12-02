@@ -32,10 +32,15 @@ export async function refisterUserController(req, res) {
     const newuser = await UserModel.create(payload);
     const save = await newuser.save();
 
+    const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${save?._id}`;
+
     const verifyEmail = await sendEmail({
       sendTo: email,
       subject: "Verify your email",
-      html: "",
+      html: verifyEmailTemplate({
+        name,
+        url: verifyEmailUrl,
+      }),
     });
   } catch (error) {
     return res.status(500).json({
