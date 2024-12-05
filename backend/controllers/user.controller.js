@@ -152,3 +152,28 @@ export async function loginController(req, res) {
     });
   }
 }
+
+export async function logoutController(req, res) {
+  try {
+    const userid = req.userId;
+
+    const cookiesOption = {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+    };
+
+    res.clearCookie("accessToken", cookiesOption);
+    res.clearCookie("refreshToken", cookiesOption);
+
+    return res.json({
+      message: "User logged out successfully",
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+}
