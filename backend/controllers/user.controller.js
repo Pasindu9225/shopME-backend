@@ -1,7 +1,9 @@
 import bcrypt from "bcrypt";
 import UserModel from "../models/user.model.js";
 import { Resend } from "resend"; // Import Resend
-import verifyEmailTemplate from "../utils/verifyemail.js"; // Import the email template
+import verifyEmailTemplate from "../utils/verifyemail.js";
+import generateAccessToken from "../utils/generatedAccessToken.js";
+import generateRefreshToken from "../utils/generatedRefreshToken.js"; // Import the email template
 
 const resend = new Resend(process.env.RESEND_API); // Initialize Resend with your API key
 
@@ -97,4 +99,56 @@ export async function verifyEmailController(req, res) {
   }
 }
 
-export async function loginController(req, res) {}
+export async function loginController(req, res) {
+  try {
+    const { email, password } = req.body;
+
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    if (user.status !== "active") {
+      return res.status(400).json({
+        message: "User is not active",
+      });
+    }
+
+    const checkPassword = await bcrypt.compare(password, user.password);
+
+    if (!checkPassword) {
+      return res.status(400).json({
+        message: "Invalid password",
+      });
+    }
+
+    const accessToken = await generateAccessToken(user._id);
+    const refreshToken = await generateRefreshToken(user._id);
+
+    const cookiesOption = {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+    };
+
+    res.cookie("accessToken", accessToken, cookiesOption);
+    res.cookie("refreshToken", refreshToken, cookiesOption);
+
+    return res.json({
+      message: "User logged in successfully",
+      success: true,
+      error: false,
+      data: {
+        accessToken,
+        refreshToken,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+}
