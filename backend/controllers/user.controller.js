@@ -66,3 +66,28 @@ export async function refisterUserController(req, res) {
     });
   }
 }
+
+export async function verifyEmailController(req, res) {
+  try {
+    const { code } = req.query;
+
+    const user = await UserModel.findOne({ _id: code });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    const updateUser = await UserModel.updateOne(
+      { _id: code },
+      { $set: { verify_email: true } }
+    );
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+}
+
+export async function loginController(req, res) {}
