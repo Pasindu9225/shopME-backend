@@ -83,6 +83,13 @@ export async function verifyEmailController(req, res) {
       { _id: code },
       { $set: { verify_email: true } }
     );
+
+    return res.json({
+      message: "Email verified successfully",
+      success: true,
+      error: false,
+      data: updateUser,
+    });
   } catch (error) {
     return res.status(500).json({
       message: error.message,
