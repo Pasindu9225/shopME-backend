@@ -4,6 +4,8 @@ import { Resend } from "resend"; // Import Resend
 import verifyEmailTemplate from "../utils/verifyemail.js";
 import generateAccessToken from "../utils/generatedAccessToken.js";
 import generateRefreshToken from "../utils/generatedRefreshToken.js"; // Import the email template
+import uploadImageClodinary from "../utils/uploadimageClodinary.js";
+import { response } from "express";
 
 const resend = new Resend(process.env.RESEND_API); // Initialize Resend with your API key
 
@@ -166,6 +168,12 @@ export async function logoutController(req, res) {
     res.clearCookie("accessToken", cookiesOption);
     res.clearCookie("refreshToken", cookiesOption);
 
+    const removeRefreshToken = await UserModel.findByIdAndUpdate(
+      userid,
+      { $set: { refresh_token: null } },
+      { new: true }
+    );
+
     return res.json({
       message: "User logged out successfully",
       success: true,
@@ -174,6 +182,92 @@ export async function logoutController(req, res) {
   } catch (error) {
     return res.status(500).json({
       message: error.message,
+    });
+  }
+}
+
+export async function uploadAvatar(req, res) {
+  try {
+    const userId = req.userId?.id; // Extract user ID from the decoded JWT object
+    const image = req.file;
+
+    console.log("Uploaded File:", image);
+
+    if (!image) {
+      return res.status(400).json({
+        message: "No file uploaded",
+        error: true,
+        success: false,
+      });
+    }
+
+    const upload = await uploadImageClodinary(image);
+    console.log("Cloudinary Upload Response:", upload);
+
+    // Update user avatar in the database
+    const updateUser = await UserModel.findByIdAndUpdate(
+      userId,
+      { $set: { avatar: upload.url } },
+      { new: true } // Return updated document
+    );
+
+    if (!updateUser) {
+      return res.status(404).json({
+        message: "User not found",
+        error: true,
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Image uploaded successfully",
+      data: {
+        _id: updateUser._id,
+        avatar: updateUser.avatar,
+      },
+      success: true,
+    });
+  } catch (error) {
+    console.error("Upload Avatar Error:", error);
+    return res.status(500).json({
+      message: error.message || "An error occurred during upload",
+      error: true,
+      success: false,
+    });
+  }
+}
+
+export async function updateUserDetails(req, res) {
+  try {
+    const userId = req.userId;
+    const { name, email, mobile, password } = req.body;
+
+    let hashedPassword = "";
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(password, salt);
+    }
+
+    const updateUser = await UserModel.findByIdAndUpdate(
+      userId,
+      ...(name && { name: name }),
+      ...(email && { email: email }),
+      ...(mobile && { mobile: mobile }),
+      ...(password && { password: hashedPassword })
+    );
+
+    return res.status(200).json({
+      message: "User details updated successfully",
+      error: false,
+      data: updateUser,
+      success: true,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+      error: true,
+      success: false,
     });
   }
 }
